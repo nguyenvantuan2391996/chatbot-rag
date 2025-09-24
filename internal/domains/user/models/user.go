@@ -1,7 +1,7 @@
 package models
 
 type IndexInput struct {
-	TextIndex string
+	Text []string
 }
 
 type ChatInput struct {

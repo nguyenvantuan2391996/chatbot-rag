@@ -3,9 +3,10 @@ package milvus
 import "github.com/milvus-io/milvus-sdk-go/milvus"
 
 type IMilvusClientInterface interface {
-	Insert(vector, collectionName, partitionTag string, id int64) error
+	Insert(vector []float32, collectionName, partitionTag string, id int64) error
 	Delete(collectionName, partitionTag string, id int64) error
 	DropCollection(collectionName string) error
+	HasCollection(collectionName string) (bool, error)
 	CreateCollection(collectionName string, dimension, indexSize int64, metric milvus.MetricType) error
 	CreateIndex(collectionName string, nList int64, indexType milvus.IndexType) error
 	DropIndex(collectionName string) error

@@ -6,7 +6,7 @@ import (
 )
 
 type IndexRequest struct {
-	TextIndex string `form:"text_index"`
+	Text []string `json:"text"`
 }
 
 type ChatRequest struct {
@@ -19,6 +19,8 @@ func (r *IndexRequest) ToIndexInput() *models.IndexInput {
 		return out
 	}
 
+	out.Text = r.Text
+
 	return out
 }
 
@@ -28,12 +30,14 @@ func (r *ChatRequest) ToChatInput() *models.ChatInput {
 		return out
 	}
 
+	out.Convention = r.Convention
+
 	return out
 }
 
 func (r *IndexRequest) Validate() error {
 	return validation.ValidateStruct(r,
-		validation.Field(&r.TextIndex, validation.Required),
+		validation.Field(&r.Text, validation.Required),
 	)
 }
 

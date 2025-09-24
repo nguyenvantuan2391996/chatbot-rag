@@ -17,7 +17,7 @@ func (h *Handler) Index(ctx *gin.Context) {
 	request := models.IndexRequest{}
 	responseAPI := response.NewResponse(ctx)
 
-	err := ctx.ShouldBind(&request)
+	err := ctx.ShouldBindJSON(&request)
 	if err != nil {
 		logrus.Warnf(constants.FormatTaskErr, "ShouldBind", err)
 		ctx.JSON(http.StatusBadRequest, responseAPI.InputError().Msg(response.ErrorMsgInput))
@@ -47,7 +47,7 @@ func (h *Handler) Chat(ctx *gin.Context) {
 	request := models.ChatRequest{}
 	responseAPI := response.NewResponse(ctx)
 
-	err := ctx.ShouldBind(&request)
+	err := ctx.ShouldBindJSON(&request)
 	if err != nil {
 		logrus.Warnf(constants.FormatTaskErr, "ShouldBind", err)
 		ctx.JSON(http.StatusBadRequest, responseAPI.InputError().Msg(response.ErrorMsgInput))

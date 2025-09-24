@@ -2,12 +2,10 @@ package milvus
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
 	"chatbot-rag/base_common/constants"
-	"chatbot-rag/base_common/utils"
 	"github.com/milvus-io/milvus-sdk-go/milvus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -50,21 +48,16 @@ func NewMilvusClient(host, port string, timeout time.Duration) (*Client, error) 
 	}, nil
 }
 
-func (mc *Client) Insert(vector, collectionName, partitionTag string, id int64) error {
+func (mc *Client) Insert(vector []float32, collectionName, partitionTag string, id int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), mc.timeout)
 	defer cancel()
-
-	vByte, err := hex.DecodeString(vector)
-	if err != nil {
-		return err
-	}
 
 	_, status, err := mc.milvus.Insert(ctx, &milvus.InsertParam{
 		CollectionName: collectionName,
 		PartitionTag:   partitionTag,
 		RecordArray: []milvus.Entity{
 			{
-				FloatData: utils.DecodeUnsafeF32(vByte),
+				FloatData: vector,
 			},
 		},
 		IDArray: []int64{id},
@@ -110,6 +103,18 @@ func (mc *Client) DropCollection(collectionName string) error {
 	}
 
 	return nil
+}
+
+func (mc *Client) HasCollection(collectionName string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), mc.timeout)
+	defer cancel()
+
+	collection, _, err := mc.milvus.HasCollection(ctx, collectionName)
+	if err != nil {
+		return false, err
+	}
+
+	return collection, nil
 }
 
 func (mc *Client) CreateCollection(collectionName string, dimension, indexSize int64, metric milvus.MetricType) error {

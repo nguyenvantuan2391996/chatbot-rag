@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  milvus:
+    image: milvusdb/milvus:1.1.1-cpu-d061621-330cc6
+    container_name: milvus-one
+    ports:
+      - "19530:19530"
+      - "19121:19121"
+    environment:
+      DEPLOY_MODE: standalone
+    volumes:
+      - milvus-data-one:/var/lib/milvus
+      - ./server_config.yaml:/var/lib/milvus/conf/server_config.yaml
+
+  milvus-em:
+    image: milvusdb/milvus-em:latest
+    container_name: milvus-em
+    ports:
+      - "3001:80"
+
+volumes:
+  milvus-data-one:
