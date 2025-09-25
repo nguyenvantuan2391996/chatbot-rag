@@ -14,7 +14,7 @@ import (
 
 func (h *Handler) Index(ctx *gin.Context) {
 	logrus.Info(fmt.Sprintf(constants.FormatBeginAPI, "Index"))
-	request := models.IndexRequest{}
+	request := models.FactRequest{}
 	responseAPI := response.NewResponse(ctx)
 
 	err := ctx.ShouldBindJSON(&request)
@@ -30,7 +30,7 @@ func (h *Handler) Index(ctx *gin.Context) {
 		return
 	}
 
-	result, err := h.userService.Index(ctx, request.ToIndexInput())
+	result, err := h.userService.Index(ctx, request.ToFactInput())
 	if err != nil {
 		logrus.Errorf(constants.FormatTaskErr, "Index", err)
 		ctx.JSON(http.StatusInternalServerError, responseAPI.ToResponse(constants.InternalServerError,

@@ -5,21 +5,21 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
-type IndexRequest struct {
-	Text []string `json:"text"`
+type FactRequest struct {
+	Facts []string `json:"facts"`
 }
 
 type ChatRequest struct {
 	Convention string `form:"convention"`
 }
 
-func (r *IndexRequest) ToIndexInput() *models.IndexInput {
-	out := &models.IndexInput{}
+func (r *FactRequest) ToFactInput() *models.FactInput {
+	out := &models.FactInput{}
 	if r == nil {
 		return out
 	}
 
-	out.Text = r.Text
+	out.Facts = r.Facts
 
 	return out
 }
@@ -35,9 +35,9 @@ func (r *ChatRequest) ToChatInput() *models.ChatInput {
 	return out
 }
 
-func (r *IndexRequest) Validate() error {
+func (r *FactRequest) Validate() error {
 	return validation.ValidateStruct(r,
-		validation.Field(&r.Text, validation.Required),
+		validation.Field(&r.Facts, validation.Required),
 	)
 }
 
