@@ -111,7 +111,7 @@ func (us *User) Chat(ctx context.Context, input *models.ChatInput) (*comoutput.B
 	prompt := fmt.Sprintf(`
 Bạn là một trợ lý phim chiếu rạp.
 Hãy trả lời câu hỏi dựa trên những thông tin được cung cấp dưới đây.
-Nếu thông tin không đủ, hãy nói "Tôi không biết dựa trên những thông tin đó."
+Trả lời trả về là dạng markdown.
 %s
 Câu hỏi: %s`, factsPrompt, input.Convention)
 
@@ -131,8 +131,6 @@ Câu hỏi: %s`, factsPrompt, input.Convention)
 
 	return &comoutput.BaseOutput{
 		Status: http.StatusOK,
-		Data: map[string]interface{}{
-			"answer": completion.Choices[0].Message.Content,
-		},
+		Data:   completion.Choices[0].Message.Content,
 	}, nil
 }

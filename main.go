@@ -118,6 +118,18 @@ func main() {
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	r.Use(middlewares.Recover())
 
+	r.Static("/static", "./static")
+
+	routes := map[string]string{
+		"": "chat.html",
+	}
+
+	for path, file := range routes {
+		r.GET(path, func(c *gin.Context) {
+			c.File("./static/" + file)
+		})
+	}
+
 	api := r.Group("v1/api")
 	{
 		api.Use(middlewares.RequestID())

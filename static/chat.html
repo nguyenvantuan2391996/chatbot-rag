@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat BHD</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f2f2f7;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #fff;
+            border-bottom: 1px solid #ccc;
+        }
+        .header img {
+            height: 36px;
+            margin-right: 10px;
+        }
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: #f2f2f7;
+        }
+        .message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 20px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        /* user & bot */
+        .user {
+            align-self: flex-end;
+            background-color: #0a84ff;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .bot {
+            align-self: flex-start;
+            background-color: #fff;
+            color: #111;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        /* markdown text */
+        .bot h3 {
+            font-size: 15px;
+            margin: 6px 0;
+            font-weight: bold;
+            color: #333;
+        }
+        .bot p { margin: 4px 0; }
+        .bot ul, .bot ol { padding-left: 20px; margin: 4px 0; }
+        .bot strong { color: #d32f2f; }
+        .bot a { color: #0a84ff; text-decoration: none; }
+        .bot a:hover { text-decoration: underline; }
+        .bot img {
+            max-width: 160px;
+            height: auto;
+            border-radius: 8px;
+            margin: 6px 0;
+            display: block;
+        }
+        /* inline code */
+        .bot code {
+            background: #f1f1f1;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        /* code block */
+        .bot pre {
+            background: #f7f7f7;
+            color: #222;
+            padding: 8px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.4;
+            margin: 6px 0;
+        }
+        .bot blockquote {
+            border-left: 4px solid #ccc;
+            padding-left: 10px;
+            color: #555;
+            margin: 6px 0;
+            font-style: italic;
+        }
+        /* input */
+        .input-container {
+            display: flex;
+            padding: 10px;
+            background-color: #fff;
+            border-top: 1px solid #ccc;
+        }
+        .input-container input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            outline: none;
+            font-size: 14px;
+        }
+        .input-container button {
+            margin-left: 8px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 20px;
+            background-color: #0a84ff;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <img src="https://www.bhdstar.vn/wp-content/uploads/2024/09/logo2024.png" alt="BHD Logo">
+</div>
+
+<div class="chat-container" id="chatContainer"></div>
+
+<div class="input-container">
+    <input type="text" id="userInput" placeholder="Type a message..." />
+    <button id="sendBtn">Send</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    const chatContainer = document.getElementById('chatContainer');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    userInput.addEventListener('keydown', function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+    sendBtn.addEventListener('click', sendMessage);
+
+    function appendMessage(content, type) {
+        const msg = document.createElement('div');
+        msg.className = 'message ' + type;
+        msg.innerHTML = marked.parse(content);
+        chatContainer.appendChild(msg);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+        appendMessage(text, 'user');
+        userInput.value = '';
+
+        const botMsg = document.createElement('div');
+        botMsg.className = 'message bot';
+        botMsg.innerHTML = '';
+        chatContainer.appendChild(botMsg);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        try {
+            const response = await fetch('http://192.119.101.100:3000/v1/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ convention: text })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let done = false;
+            let fullText = '';
+            while (!done) {
+                const { value, done: readerDone } = await reader.read();
+                done = readerDone;
+                if (value) {
+                    fullText += decoder.decode(value);
+                    botMsg.innerHTML = marked.parse(fullText);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+            }
+        } catch (err) {
+            botMsg.innerHTML = "Error: " + err.message;
+        }
+    }
+</script>
+</body>
+</html>

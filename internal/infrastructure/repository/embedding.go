@@ -22,7 +22,7 @@ func (er *EmbeddingRepository) Create(ctx context.Context, record *entities.Embe
 func (er *EmbeddingRepository) GetListFacts(ctx context.Context, ids []int64) ([]string, error) {
 	var facts []string
 
-	err := er.db.WithContext(ctx).Where("id IN ?", ids).Pluck("fact", &facts).Error
+	err := er.db.WithContext(ctx).Model(&entities.Embedding{}).Where("id IN ?", ids).Pluck("fact", &facts).Error
 	if err != nil {
 		return nil, err
 	}
