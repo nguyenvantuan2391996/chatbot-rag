@@ -10,7 +10,7 @@ type FactRequest struct {
 }
 
 type ChatRequest struct {
-	Convention string `form:"convention"`
+	Convention string `json:"convention"`
 }
 
 func (r *FactRequest) ToFactInput() *models.FactInput {

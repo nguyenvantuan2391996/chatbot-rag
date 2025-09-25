@@ -2,6 +2,7 @@ package milvus
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -71,6 +72,32 @@ func (mc *Client) Insert(vector []float32, collectionName, partitionTag string, 
 	}
 
 	return nil
+}
+
+func (mc *Client) Search(vector []float32, collectionName string, partitionTag []string, topK int64) (milvus.TopkQueryResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), mc.timeout)
+	defer cancel()
+
+	search, status, err := mc.milvus.Search(ctx, milvus.SearchParam{
+		CollectionName: collectionName,
+		QueryEntities: []milvus.Entity{
+			{
+				FloatData: vector,
+			},
+		},
+		Topk:         topK,
+		PartitionTag: partitionTag,
+		ExtraParams:  fmt.Sprintf("{\"nprobe\" : %d}", constants.NProbeDefault),
+	})
+	if err != nil {
+		return milvus.TopkQueryResult{}, err
+	}
+
+	if !status.Ok() {
+		return milvus.TopkQueryResult{}, errors.New(status.GetMessage())
+	}
+
+	return search, nil
 }
 
 func (mc *Client) Delete(collectionName, partitionTag string, id int64) error {

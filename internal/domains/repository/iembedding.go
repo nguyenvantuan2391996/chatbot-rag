@@ -8,4 +8,5 @@ import (
 
 type IEmbeddingRepositoryInterface interface {
 	Create(ctx context.Context, record *entities.Embedding) error
+	GetListFacts(ctx context.Context, ids []int64) ([]string, error)
 }

@@ -89,6 +89,11 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
+		err = conn.CreateIndex(viper.GetString("MILVUS_COLLECTION"), 1024, sdkMilvus.IVFFLAT)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// open ai

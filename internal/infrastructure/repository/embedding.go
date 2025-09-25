@@ -18,3 +18,14 @@ func NewEmbeddingRepository(db *gorm.DB) *EmbeddingRepository {
 func (er *EmbeddingRepository) Create(ctx context.Context, record *entities.Embedding) error {
 	return er.db.WithContext(ctx).Create(&record).Error
 }
+
+func (er *EmbeddingRepository) GetListFacts(ctx context.Context, ids []int64) ([]string, error) {
+	var facts []string
+
+	err := er.db.WithContext(ctx).Where("id IN ?", ids).Pluck("fact", &facts).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return facts, nil
+}
