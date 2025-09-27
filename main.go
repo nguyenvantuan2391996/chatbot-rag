@@ -1,21 +1,23 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"time"
 
 	"chatbot-rag/base_common/constants"
-	"chatbot-rag/base_common/milvus"
 	"chatbot-rag/handler"
 	"chatbot-rag/handler/middlewares"
 	"chatbot-rag/internal/domains/user"
 	"chatbot-rag/internal/infrastructure/repository"
+	"github.com/milvus-io/milvus-sdk-go/v2/client"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
-	sdkMilvus "github.com/milvus-io/milvus-sdk-go/milvus"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -53,6 +55,51 @@ func initDatabase() (*gorm.DB, error) {
 	return db, nil
 }
 
+func initMilvus(host, port string, timeout time.Duration) (client.Client, error) {
+	if timeout == 0 {
+		timeout = 30 * time.Second
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	milvusAddress := fmt.Sprintf("%s:%s", host, port)
+
+	config := client.Config{
+		Address:  milvusAddress,
+		Username: viper.GetString(constants.MilvusUserName),
+		Password: viper.GetString(constants.MilvusPassword),
+	}
+
+	c, err := client.NewClient(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("connection timeout")
+		} else if errors.Is(err, context.Canceled) {
+			return nil, fmt.Errorf("context canceled")
+		} else {
+			return nil, err
+		}
+
+	default:
+		milvusState, err := c.CheckHealth(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if !milvusState.IsHealthy {
+			logrus.Error(fmt.Sprintf("milvus v2 at %v is unhealthy", milvusAddress))
+		}
+	}
+
+	return c, nil
+}
+
 func main() {
 	viper.AddConfigPath("build")
 	viper.SetConfigName("app")
@@ -72,37 +119,28 @@ func main() {
 	}
 
 	// milvus
-	conn, err := milvus.NewMilvusClient(viper.GetString("MILVUS_HOST"), viper.GetString("MILVUS_PORT"), constants.DefaultTimeout)
+	milvusClient, err := initMilvus(viper.GetString(constants.MilvusHost), viper.GetString(constants.MilvusPort),
+		30*time.Second)
 	if err != nil {
-		logrus.Errorf(constants.FormatTaskErr, "NewMilvusClient", err)
-		panic(err)
-	}
-
-	isHasCollection, err := conn.HasCollection(viper.GetString("MILVUS_COLLECTION"))
-	if err != nil {
-		logrus.Errorf(constants.FormatTaskErr, "HasCollection", err)
-		panic(err)
-	}
-
-	if !isHasCollection {
-		err = conn.CreateCollection(viper.GetString("MILVUS_COLLECTION"), 1536, 1024, sdkMilvus.IP)
-		if err != nil {
-			panic(err)
-		}
-
-		err = conn.CreateIndex(viper.GetString("MILVUS_COLLECTION"), 1024, sdkMilvus.IVFFLAT)
-		if err != nil {
-			panic(err)
-		}
+		logrus.Fatal("failed to open milvus:", err)
+		return
 	}
 
 	// open ai
 	openAI := openai.NewClient(viper.GetString("OPENAI_API_KEY"))
 
 	// repository
+	milvusRepo := repository.NewMilvusRepository(milvusClient, 30*time.Second)
 	embeddingRepo := repository.NewEmbeddingRepository(db)
 
-	userService := user.NewUserService(conn, openAI, embeddingRepo)
+	// init milvus collection and bucket
+	err = milvusRepo.InitCollection(viper.GetString(constants.MilvusCollection))
+	if err != nil {
+		logrus.Errorf(constants.FormatTaskErr, "milvusRepo.InitCollection", err)
+		return
+	}
+
+	userService := user.NewUserService(openAI, milvusRepo, embeddingRepo)
 
 	h := handler.NewHandler(userService)
 
